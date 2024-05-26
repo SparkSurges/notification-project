@@ -8,11 +8,14 @@ from firebase_admin import credentials, messaging
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # Initialize Firebase Admin SDK
+print("Initializing Firebase Admin SDK...")
 cred = credentials.Certificate("./secrets.json")
 firebase_admin.initialize_app(cred)
+print("Firebase Admin SDK initialized.")
 
 # Database connection
-conn = sqlite3.connect('notification.db')
+print("Connecting to the database...")
+conn = sqlite3.connect('./notification.db')
 c = conn.cursor()
 
 # Create a table if it doesn't exist
@@ -21,6 +24,7 @@ c.execute('''
           (id INTEGER PRIMARY KEY, notified INTEGER)
           ''')
 conn.commit()
+print("Database connection established.")
 
 def get_event_time(form_id):
     # Extract components from the form_id
@@ -41,13 +45,13 @@ def get_event_time(form_id):
     return close_time
 
 def check_for_updates():
+    print('Checking for a new update...')
     # Make a request to your endpoint
     response = requests.get('https://sports-performance-c6dd6-default-rtdb.firebaseio.com/notifquest.json')
     serialized_forms = response.json()  # Assuming the response is in JSON format
 
     # Check for new items and update the local database
     for form_id in serialized_forms:
-        print(form_id)
         event_time = get_event_time(form_id)  
         c.execute('SELECT * FROM notifications WHERE id = ?', (form_id,))
 
@@ -68,7 +72,6 @@ def schedule_notification(event_time, form_id):
     scheduler.add_job(send_notifications, 'date', run_date=notification_time, args=[form_id])
     print(f"Notification scheduled for {notification_time}")
 
-
 def send_notifications(form_id):
     try:
         # Check if the notification exists and has not been sent yet
@@ -86,14 +89,13 @@ def send_notifications(form_id):
             return
         
         user_ids = response.json()  # Assuming the response is a JSON list of user_ids
-
         for user_id in user_ids:
             user_key = user_ids[user_id] 
             send_firebase_notification(user_key, "Faltam 30 minutos!", f"Por favor, preencha seu formulário, faltam apenas 30 minutos.")
 
-            # Update the notification status in the database
-            c.execute('UPDATE notifications SET notified = 1 WHERE id = ?', (form_id,))
-            conn.commit()
+        # Update the notification status in the database
+        c.execute('UPDATE notifications SET notified = 1 WHERE id = ?', (form_id,))
+        conn.commit()
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -113,13 +115,17 @@ def send_firebase_notification(token, title, body):
         print(f"Failed to send message to {token}: {e}")
 
 if __name__ == '__main__':
+    print("Starting the service...")
     scheduler = BackgroundScheduler()
     scheduler.add_job(check_for_updates, 'interval', minutes=30)
     scheduler.start()
+    print("Service started. Checking for updates every 30 minutes.")
 
     try:
         while True:
             time.sleep(2)
     except (KeyboardInterrupt, SystemExit):
+        print("Stopping the service...")
         scheduler.shutdown()
         conn.close()
+        print("Service stopped.")
