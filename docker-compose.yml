@@ -7,6 +7,3 @@ services:
     restart: always
     volumes:
       - .:/app
-
-volumes:
-  sqlite_data:

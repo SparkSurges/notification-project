@@ -15,7 +15,7 @@ print("Firebase Admin SDK initialized.")
 
 # Database connection
 print("Connecting to the database...")
-conn = sqlite3.connect('./notification.db')
+conn = sqlite3.connect('./notification.db', check_same_thread=False)
 c = conn.cursor()
 
 # Create a table if it doesn't exist
@@ -40,7 +40,7 @@ def get_event_time(form_id):
     close_minute = int(close_time_24hr[2:])
     
     # Create a datetime object for the close time
-    close_time = datetime(year, month, day, close_hour, close_minute)
+    close_time = datetime.datetime(year, month, day, close_hour, close_minute)
     
     return close_time
 
@@ -49,16 +49,21 @@ def check_for_updates():
     # Make a request to your endpoint
     response = requests.get('https://sports-performance-c6dd6-default-rtdb.firebaseio.com/notifquest.json')
     serialized_forms = response.json()  # Assuming the response is in JSON format
+    print(f"Request made to the server successfully.")
 
     # Check for new items and update the local database
     for form_id in serialized_forms:
+        print(f"Initiating the verification of {form_id}.")
         event_time = get_event_time(form_id)  
         c.execute('SELECT * FROM notifications WHERE id = ?', (form_id,))
 
         if not c.fetchone():
+            print(f"{form_id} wasn't found in the database...")
+            print(f"Initiating verification...")
             if event_time < datetime.datetime.now():
                 c.execute('INSERT INTO notifications (id, notified) VALUES (?, ?)', (form_id, 1))
                 conn.commit()
+                print(f"{form_id} is already notified")
                 continue
 
             c.execute('INSERT INTO notifications (id, notified) VALUES (?, ?)', (form_id, 0))
@@ -66,11 +71,13 @@ def check_for_updates():
 
             # Schedule a notification
             schedule_notification(event_time, form_id)
+        else:
+            print(f"{form_id} is already notified")
 
 def schedule_notification(event_time, form_id):
     notification_time = event_time - datetime.timedelta(minutes=30)  # 30 minutes before the event
     scheduler.add_job(send_notifications, 'date', run_date=notification_time, args=[form_id])
-    print(f"Notification scheduled for {notification_time}")
+    print(f"Notification scheduled for {form_id} on {notification_time}")
 
 def send_notifications(form_id):
     try:
@@ -91,7 +98,7 @@ def send_notifications(form_id):
         user_ids = response.json()  # Assuming the response is a JSON list of user_ids
         for user_id in user_ids:
             user_key = user_ids[user_id] 
-            send_firebase_notification(user_key, "Faltam 30 minutos!", f"Por favor, preencha seu formulário, faltam apenas 30 minutos.")
+            send_firebase_notification(user_key, "O tempo está acabando!", f"Por favor, preencha seu formulário, faltam apenas 30 minutos.")
 
         # Update the notification status in the database
         c.execute('UPDATE notifications SET notified = 1 WHERE id = ?', (form_id,))
