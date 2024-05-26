@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  notifier:
+    build: .
+    container_name: notifier_service
+    restart: always
+    volumes:
+      - .:/app
+    environment:
+      - FIREBASE_API_KEY=your_firebase_api_key
+    depends_on:
+      - db
+  db:
+    image: sqlite:3.32.3
+    container_name: sqlite_db
+    volumes:
+      - sqlite_data:/var/lib/sqlite3
+
+volumes:
+  sqlite_data:
