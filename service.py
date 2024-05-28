@@ -10,7 +10,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
 
 # Define how much minutes before the close time to notify the user
-MINUTES_BEFORE = 1
+MINUTES_BEFORE = 30
+
+# Define the request delay time
+REQUEST_DELAY = 5
 
 # Form list type
 FORM_STRING = ['PSE', 'PSR', 'QDM']
@@ -92,7 +95,7 @@ def check_for_updates():
                 print(f"{form_id} is already notified")
 
 def schedule_notification(event_time, form_id):
-    notification_time = event_time - datetime.timedelta(minutes=MINUTES_BEFORE)  # 30 minutes before the event
+    notification_time = event_time - datetime.timedelta(minutes=5)  # 30 minutes before the event
     scheduler.add_job(send_notifications, 'date', run_date=notification_time, args=[form_id], misfire_grace_time=1800)
     print(f"Notification scheduled for {form_id} on {notification_time}")
 
@@ -149,10 +152,10 @@ if __name__ == '__main__':
     global scheduler
 
     scheduler = BackgroundScheduler(timezone=brasilia_tz)
-    scheduler.add_job(check_for_updates, 'interval', minutes=MINUTES_BEFORE)
+    scheduler.add_job(check_for_updates, 'interval', minutes=REQUEST_DELAY)
     scheduler.start()
 
-    print(f"Service started. Checking for updates every {MINUTES_BEFORE} minutes.")
+    print(f"Service started. Checking for updates every {REQUEST_DELAY} minutes.")
 
     try:
         while True:
