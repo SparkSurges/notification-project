@@ -13,7 +13,7 @@ from apscheduler.triggers.date import DateTrigger
 MINUTES_BEFORE = 30
 
 # Define the request delay time
-REQUEST_DELAY = 5
+REQUEST_DELAY = 20
 
 # Form list type
 FORM_STRING = ['PSE', 'PSR', 'QDM']
