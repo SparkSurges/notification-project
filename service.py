@@ -95,7 +95,7 @@ def check_for_updates():
                 print(f"{form_id} is already notified")
 
 def schedule_notification(event_time, form_id):
-    notification_time = event_time - datetime.timedelta(minutes=5)  # 30 minutes before the event
+    notification_time = event_time - datetime.timedelta(minutes=MINUTES_BEFORE)  # 30 minutes before the event
     scheduler.add_job(send_notifications, 'date', run_date=notification_time, args=[form_id], misfire_grace_time=1800)
     print(f"Notification scheduled for {form_id} on {notification_time}")
 
